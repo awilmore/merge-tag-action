@@ -20,6 +20,7 @@ async function run() {
         owner: ref.owner,
         repo: ref.repo,
         tag_name: nextVersion,
+        body: "[RELMGMT: Tagged " + nextVersion + "]",
       }).then(() => {
         return createPRCommentOnce(client, `Merged and tagged as \`${nextVersion}\`.`)
       });
