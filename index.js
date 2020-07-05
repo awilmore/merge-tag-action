@@ -16,13 +16,30 @@ async function run() {
     const nextVersion = await getNewVersionTag(changeType);
     // if just merged, tag and release
     if (github.context.payload.action === "closed" && github.context.payload.pull_request.merged === true) {
-      return client.git.createTag({
+      // Create annotated tag
+      core.debug(`Creating annotated tag: ${nextVersion} ...`)
+      tagResponse = client.git.createTag({
         owner: ref.owner,
         repo: ref.repo,
         tag: nextVersion,
         message: "[RELMGMT: Tagged " + nextVersion + "]",
         object: process.env.GITHUB_SHA,
         type: "commit",
+      });
+
+      // Check response
+      core.debug('Checking tag response ...')
+      if (tagResponse.status !== 201) {
+        core.setFailed(`Failed to create tag, tagResponse.status: ${tagResponse.status}`)
+      }
+
+      // Create ref (this is equivalent to git push, I think)
+      core.debug('Creating tag ref ...')
+      return client.git.createRef({
+        owner: ref.owner,
+        repo: ref.repo,
+        ref: 'refs/tags/' + nextVersion,
+        sha: tagResponse.data.sha,
       }).then(() => {
         return createPRCommentOnce(client, `Merged and tagged as \`${nextVersion}\`.`)
       });
