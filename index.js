@@ -21,6 +21,7 @@ async function run() {
         repo: ref.repo,
         tag: nextVersion,
         message: "[RELMGMT: Tagged " + nextVersion + "]",
+        object: process.env.GITHUB_SHA,
         type: "commit",
       }).then(() => {
         return createPRCommentOnce(client, `Merged and tagged as \`${nextVersion}\`.`)
