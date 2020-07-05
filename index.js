@@ -16,11 +16,12 @@ async function run() {
     const nextVersion = await getNewVersionTag(changeType);
     // if just merged, tag and release
     if (github.context.payload.action === "closed" && github.context.payload.pull_request.merged === true) {
-      return client.repos.createRelease({
+      return client.git.createTag({
         owner: ref.owner,
         repo: ref.repo,
-        tag_name: nextVersion,
-        body: "[RELMGMT: Tagged " + nextVersion + "]",
+        tag: nextVersion,
+        message: "[RELMGMT: Tagged " + nextVersion + "]",
+        type: "commit",
       }).then(() => {
         return createPRCommentOnce(client, `Merged and tagged as \`${nextVersion}\`.`)
       });
