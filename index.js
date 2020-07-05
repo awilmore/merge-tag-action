@@ -17,9 +17,7 @@ async function run() {
     // if just merged, tag and release
     if (github.context.payload.action === "closed" && github.context.payload.pull_request.merged === true) {
       // Create annotated tag
-      core.debug(`[core.debug] Creating annotated tag: ${nextVersion} ...`)      // Trying different log methods
-      console.log(`[console.log] Creating annotated tag: ${nextVersion} ...`)    // Trying different log methods
-      console.info(`[console.info] Creating annotated tag: ${nextVersion} ...`)  // Trying different log methods
+      console.info(`[info] Creating annotated git tag: ${nextVersion} ...`)
       tagResponse = await client.git.createTag({
         owner: ref.owner,
         repo: ref.repo,
@@ -30,22 +28,35 @@ async function run() {
       });
 
       // Check response
-      core.debug('Checking tag response ...')
+      console.info('[info] Checking git tag response ...')
       if (tagResponse.status !== 201) {
-        core.setFailed(`Failed to create tag, tagResponse.status: ${tagResponse.status}`)
-
-      } else {
-        // Create ref (this is equivalent to git push, I think)
-        core.debug('Creating tag ref ...')
-        return client.git.createRef({
-          owner: ref.owner,
-          repo: ref.repo,
-          ref: 'refs/tags/' + nextVersion,
-          sha: tagResponse.data.sha,
-        }).then(() => {
-          return createPRCommentOnce(client, `Merged and tagged as \`${nextVersion}\`.`)
-        });
+        core.setFailed(`Failed to create git tag, tagResponse.status: ${tagResponse.status}`)
       }
+
+      // Create ref (this is equivalent to git push, I think)
+      console.info(`[info] Creating tag ref: refs/tags/${nextVersion} ...`)
+      refResponse = await client.git.createRef({
+        owner: ref.owner,
+        repo: ref.repo,
+        ref: 'refs/tags/' + nextVersion,
+        sha: tagResponse.data.sha
+      });
+
+      // Check response
+      console.info(`[info] Checking git ref response ...`)
+      if (tagResponse.status !== 201) {
+        core.setFailed(`Failed to create git ref, refResponse.status: ${refResponse.status}`)
+      }
+
+      // Lastly, create github release
+      console.info(`[info] Creating github release: ${nextVersion} ...`)
+      return client.repos.createRelease({
+        owner: ref.owner,
+        repo: ref.repo,
+        tag_name: nextVersion,
+      }).then(() => {
+        return createPRCommentOnce(client, `Merged and tagged as \`${nextVersion}\`.`)
+      });
     }
     // otherwise update the title, and make a comment.
     return Promise.all([
